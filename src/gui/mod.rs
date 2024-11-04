@@ -13,10 +13,10 @@ pub mod gui {
     pub struct Window {
         /// Our window name
         ///
-        name: String,
+        pub name: String,
         /// Our window type
         ///
-        win_type: WindowType,
+        pub win_type: WindowType,
     }
     // Define our implementation of this struct, all we'll need is a construtor
     //
@@ -26,3 +26,5 @@ pub mod gui {
         }
     }
 }
+
+pub mod windows;
