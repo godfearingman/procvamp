@@ -26,7 +26,18 @@ impl ActiveWindows {
     pub fn remove_tab(&mut self, to_find: Window) -> Option<Window> {
         self.tabs
             .iter()
-            .position(|tab| tab.name == to_find.name)
+            .position(|tab| tab.win_content.title() == to_find.win_content.title())
             .map(|pos| self.tabs.remove(pos))
     }
+    // Get latest element, when a new tab is opened we'll focus that
+    //
+    pub fn get_latest_tab(&self) -> Option<&Window> {
+        self.tabs.last()
+    }
 }
+
+pub mod disassembly_view;
+pub mod function_view;
+pub mod graph_view;
+pub mod scanner_results;
+pub mod scanner_view;
