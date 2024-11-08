@@ -1,16 +1,17 @@
+use super::gui::TabContent;
 use super::gui::Window;
 
 // Define structure for how we manage all currently opened windows/tabs
 //
-pub struct ActiveWindows {
+pub struct ActiveWindows<T: TabContent> {
     // Anytime we open a tab through a dropdown, it'll be pushed onto this array
     //
-    pub tabs: Vec<Window>,
+    pub tabs: Vec<Window<T>>,
 }
 
 // Define any functions we need
 //
-impl ActiveWindows {
+impl<T: TabContent> ActiveWindows<T> {
     // our constructor, don't need to do anything here
     //
     pub fn default() -> Self {
@@ -18,12 +19,12 @@ impl ActiveWindows {
     }
     // Push any newly opened tabs onto the array
     //
-    pub fn add_tab(&mut self, new_tab: Window) {
+    pub fn add_tab(&mut self, new_tab: Window<T>) {
         self.tabs.push(new_tab)
     }
     // Remove tab on close
     //
-    pub fn remove_tab(&mut self, to_find: Window) -> Option<Window> {
+    pub fn remove_tab(&mut self, to_find: Window<T>) -> Option<Window<T>> {
         self.tabs
             .iter()
             .position(|tab| tab.win_content.title() == to_find.win_content.title())
@@ -31,7 +32,7 @@ impl ActiveWindows {
     }
     // Get latest element, when a new tab is opened we'll focus that
     //
-    pub fn get_latest_tab(&self) -> Option<&Window> {
+    pub fn get_latest_tab(&self) -> Option<&Window<T>> {
         self.tabs.last()
     }
 }

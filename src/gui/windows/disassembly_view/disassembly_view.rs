@@ -1,35 +1,14 @@
 use crate::gui::gui::TabContent;
-use egui::{Color32, RichText, TextStyle, Ui};
+use crate::gui::main::DARK_THEME;
+use egui::{RichText, TextStyle, Ui};
 
 // Create out custom TabContent object for this specific tab, in this case it will be for our
 // disassembly view
 //
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct DisassemblyView {
     pub address_start: u64,
     //pub bytes: Vec<u8>,
-}
-
-// Define our vampire-themed colors
-const THEME_COLORS: ThemeColors = ThemeColors {
-    // Deep blood red
-    primary: Color32::from_rgb(140, 0, 0),
-    // Rich purple
-    secondary: Color32::from_rgb(83, 53, 74),
-    // Darker blood red for backgrounds
-    background_dark: Color32::from_rgb(20, 0, 0),
-    // Desaturated blood red for text
-    text_muted: Color32::from_rgb(171, 103, 103),
-    // Brighter blood red for highlights
-    highlight: Color32::from_rgb(196, 27, 27),
-};
-
-struct ThemeColors {
-    primary: Color32,
-    secondary: Color32,
-    background_dark: Color32,
-    text_muted: Color32,
-    highlight: Color32,
 }
 
 // Form abstract link to TabContent
@@ -45,26 +24,31 @@ impl TabContent for DisassemblyView {
         // look like in the future once we get the disassembler actually set up
         //
         egui::Frame::none()
-            .fill(THEME_COLORS.background_dark)
+            .fill(DARK_THEME.background_dark)
             .inner_margin(10.0)
             .show(ui, |ui| {
                 egui::ScrollArea::vertical().show(ui, |ui| {
-                    for i in 0..20 {
+                    // Eventually we'll need to switch to a method that figures out how much free
+                    // space is currently available on the current tab (As it is resizable at the
+                    // moment) and just display that amount. Or we can just read the default set
+                    // size and since this is a scroll area, there isn't much bad that can happen.
+                    //
+                    for i in 0..512 {
                         ui.horizontal(|ui| {
                             ui.spacing_mut().item_spacing.x = 30.0;
                             ui.label(
-                                RichText::new(format!("{:X}", self.address_start + (i * 8)))
-                                    .color(THEME_COLORS.primary)
+                                RichText::new(format!("{:016X}", self.address_start + (i * 8)))
+                                    .color(DARK_THEME.primary)
                                     .text_style(TextStyle::Monospace),
                             );
                             ui.label(
                                 RichText::new("00 00 00 00 00 00 00 00")
-                                    .color(THEME_COLORS.secondary)
+                                    .color(DARK_THEME.secondary)
                                     .text_style(TextStyle::Monospace),
                             );
                             ui.label(
                                 RichText::new("Disassembler text")
-                                    .color(THEME_COLORS.text_muted)
+                                    .color(DARK_THEME.text_muted)
                                     .text_style(TextStyle::Monospace),
                             );
                         });

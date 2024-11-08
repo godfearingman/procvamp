@@ -12,18 +12,19 @@ pub mod gui {
     }
     // Basic struct for defining windows and what type they are
     //
-    pub struct Window {
+    #[derive(Debug, Clone)]
+    pub struct Window<T: TabContent> {
         // Our window type
         //
         pub win_type: WindowType,
         // Our window content
         //
-        pub win_content: Box<dyn TabContent>,
+        pub win_content: T,
     }
     // Define our implementation of this struct, all we'll need is a construtor
     //
-    impl Window {
-        pub fn new(win_type: WindowType, win_content: Box<dyn TabContent>) -> Self {
+    impl<T: TabContent> Window<T> {
+        pub fn new(win_type: WindowType, win_content: T) -> Self {
             Self {
                 win_type,
                 win_content,
@@ -32,7 +33,7 @@ pub mod gui {
     }
     // Define our trait for an abstract type docking system
     //
-    pub trait TabContent {
+    pub trait TabContent: Clone {
         // This will be where the actual body of what the tab will hold is displayed
         //
         fn ui(&mut self, ui: &mut Ui);
