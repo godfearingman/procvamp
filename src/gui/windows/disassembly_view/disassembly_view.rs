@@ -1,6 +1,7 @@
+use crate::gui::gui::selectable_bp;
 use crate::gui::gui::TabContent;
 use crate::gui::main::DARK_THEME;
-use egui::{RichText, TextStyle, Ui};
+use egui::{Color32, RichText, TextStyle, Ui};
 
 // Create out custom TabContent object for this specific tab, in this case it will be for our
 // disassembly view
@@ -35,6 +36,18 @@ impl TabContent for DisassemblyView {
                     //
                     for i in 0..512 {
                         ui.horizontal(|ui| {
+                            // Change the spacing for the breakpoint button to be closer and then
+                            // change it back to normal after
+                            //
+                            ui.spacing_mut().item_spacing.x = 5.0;
+                            // TODO: We want to check if the current address has a breakpoint over it or
+                            // not for the coloring so we'll need to do that after we create both
+                            // the software breakpoint struct and the hardware breakpoint struct.
+                            // We'll construct it and ideally push it into this struct through the
+                            // enum construction as this is the only visible class that needs it
+                            // unless we add another view to inspect breakpoints.
+                            selectable_bp(ui, None);
+
                             ui.spacing_mut().item_spacing.x = 30.0;
                             ui.label(
                                 RichText::new(format!("{:016X}", self.address_start + (i * 8)))
