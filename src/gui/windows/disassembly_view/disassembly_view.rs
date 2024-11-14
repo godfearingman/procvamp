@@ -1,7 +1,7 @@
 use crate::gui::gui::selectable_bp;
 use crate::gui::gui::TabContent;
 use crate::gui::main::DARK_THEME;
-use egui::{Color32, RichText, TextStyle, Ui};
+use egui::{RichText, TextStyle, Ui};
 
 // Create out custom TabContent object for this specific tab, in this case it will be for our
 // disassembly view
