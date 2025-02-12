@@ -49,10 +49,11 @@ impl egui_dock::TabViewer for TabViewer {
 
 pub struct DebugView {
     tree: DockState<Window<Tab>>,
+    pid: u32,
 }
 
-impl Default for DebugView {
-    fn default() -> Self {
+impl DebugView {
+    pub fn new(pid: u32) -> Self {
         // Setup our initial view of the entire window
         //
         let mut windows_manager = ActiveWindows::default();
@@ -112,7 +113,7 @@ impl Default for DebugView {
             windows_manager.tabs.clone(),
         );
 
-        Self { tree }
+        Self { tree, pid }
     }
 }
 
