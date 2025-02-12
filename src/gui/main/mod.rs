@@ -1,3 +1,4 @@
+pub mod debug;
 pub mod main;
 use egui::Color32;
 

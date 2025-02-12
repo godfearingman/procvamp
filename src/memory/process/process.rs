@@ -27,9 +27,15 @@ impl Process {
         // Loop through all processes
         loop {
             // Get process name
-            let proc_name: String = String::from_utf8_lossy(&proc_entry.szExeFile[..])
-                .trim_end_matches('\0')
-                .to_string();
+            let proc_name: String = String::from_utf8(
+                proc_entry
+                    .szExeFile
+                    .iter()
+                    .map(|&c| c as u8)
+                    .take_while(|&c| c != 0)
+                    .collect::<Vec<u8>>(),
+            )
+            .unwrap();
             // Check name
             if &proc_name == name_of_process {
                 CloseHandle(proc_snapshot)?;
@@ -53,7 +59,7 @@ impl Process {
             // Onto next entry
             match Process32Next(proc_snapshot, &mut proc_entry) {
                 Ok(_) => continue,
-                Err(e) if e.raw_os_error() == Some(ERROR_NO_MORE_FILES as _) => break,
+                Err(e) if e.code() == ERROR_NO_MORE_FILES.into() => break,
                 Err(e) => {
                     CloseHandle(proc_snapshot)?;
                     return Err(e.into());
@@ -76,7 +82,7 @@ impl Process {
             &value_to_write as *const T as *const c_void,
             std::mem::size_of::<T>(),
             None,
-        );
+        )?;
         Ok(())
     }
     /// Write an array of bytes to the given process at location addr_to_write
@@ -92,7 +98,7 @@ impl Process {
             val_ptr,
             std::mem::size_of_val(value_to_write),
             None,
-        );
+        )?;
         Ok(())
     }
     /// Read memory of type T from the process at the given location addr_to_read
@@ -160,7 +166,7 @@ impl Process {
             // Onto next entry
             match Module32Next(module_snapshot, &mut module_entry) {
                 Ok(_) => continue,
-                Err(e) if e.raw_os_error() == Some(ERROR_NO_MORE_FILES as _) => break,
+                Err(e) if e.code() == ERROR_NO_MORE_FILES.into() => break,
                 Err(e) => {
                     CloseHandle(module_snapshot)?;
                     return Err(e.into());
