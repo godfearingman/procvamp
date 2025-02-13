@@ -1,12 +1,10 @@
+use super::iterators::module_iter::ModuleIterator;
 use super::iterators::process_iter::ProcessIterator;
 use super::ProcessErrors;
 use std::ffi::c_void;
-use windows::Win32::Foundation::{CloseHandle, ERROR_NO_MORE_FILES, HANDLE};
+use windows::Win32::Foundation::{CloseHandle, HANDLE};
 use windows::Win32::System::Diagnostics::Debug::{ReadProcessMemory, WriteProcessMemory};
-use windows::Win32::System::Diagnostics::ToolHelp::{
-    CreateToolhelp32Snapshot, Module32First, Module32Next, Process32First, Process32Next,
-    MODULEENTRY32, PROCESSENTRY32, TH32CS_SNAPMODULE, TH32CS_SNAPMODULE32, TH32CS_SNAPPROCESS,
-};
+use windows::Win32::System::Diagnostics::ToolHelp::MODULEENTRY32;
 use windows::Win32::System::Threading::{OpenProcess, PROCESS_ALL_ACCESS};
 
 #[derive(Debug, Clone)]
@@ -16,10 +14,37 @@ pub struct Process {
     process_id: u32,
 }
 
+/// Implement the Drop type for our process struct to automatically close handle on destruction
+///
+impl Drop for Process {
+    fn drop(&mut self) {
+        unsafe {
+            if !self.process_handle.is_invalid() {
+                let _ = self.close_handle();
+            }
+        }
+    }
+}
+
 impl Process {
-    // Constructor to get all running processes as a list
-    //
-    pub unsafe fn get_processes(&self) -> anyhow::Result<Vec<Self>> {}
+    /// Constructor to get all running processes as a list
+    ///
+    pub unsafe fn get_processes() -> anyhow::Result<Vec<Self>> {
+        ProcessIterator::new()?
+            .map(|(name, pid)| {
+                Ok(Self {
+                    process_name: name,
+                    process_handle: HANDLE::default(),
+                    process_id: pid,
+                })
+            })
+            .collect()
+    }
+    /// Get running modules under a process as a list
+    ///
+    pub unsafe fn get_modules(&self) -> anyhow::Result<Vec<MODULEENTRY32>> {
+        Ok(ModuleIterator::new(self.process_id)?.collect())
+    }
     /// Constructor to find a process by name and extract all the key information we'll need to perform analysis on said process
     ///
     pub unsafe fn find(name_of_process: &str) -> anyhow::Result<Self> {
@@ -39,14 +64,14 @@ impl Process {
     }
     /// Write value of type T to the given process at location addr_to_write
     ///
-    pub unsafe fn write<T>(&self, addr_to_write: usize, value_to_write: T) -> anyhow::Result<()> {
-        // Check if valid process
-        if self.process_handle == 0 {
-            Err(ProcessErrors::InvalidHandle)?
-        }
-
+    pub unsafe fn write<T>(
+        &mut self,
+        addr_to_write: usize,
+        value_to_write: T,
+    ) -> anyhow::Result<()> {
+        let handle = self.get_handle()?;
         WriteProcessMemory(
-            self.process_handle,
+            handle,
             addr_to_write as *const c_void,
             &value_to_write as *const T as *const c_void,
             std::mem::size_of::<T>(),
@@ -57,18 +82,14 @@ impl Process {
     /// Write an array of bytes to the given process at location addr_to_write
     ///
     pub unsafe fn write_bytes(
-        &self,
+        &mut self,
         addr_to_write: usize,
         value_to_write: &[u8],
     ) -> anyhow::Result<()> {
-        // Check if valid process
-        if self.process_handle == 0 {
-            Err(ProcessErrors::InvalidHandle)?
-        }
-
+        let handle = self.get_handle()?;
         let val_ptr = value_to_write.as_ptr() as *const c_void;
         WriteProcessMemory(
-            self.process_handle,
+            handle,
             addr_to_write as *const c_void,
             val_ptr,
             std::mem::size_of_val(value_to_write),
@@ -78,15 +99,14 @@ impl Process {
     }
     /// Read memory of type T from the process at the given location addr_to_read
     ///
-    pub unsafe fn read<T /*: std::fmt::Display*/>(&self, addr_to_read: usize) -> anyhow::Result<T> {
-        // Check if valid process
-        if self.process_handle == 0 {
-            Err(ProcessErrors::InvalidHandle)?
-        }
-
+    pub unsafe fn read<T /*: std::fmt::Display*/>(
+        &mut self,
+        addr_to_read: usize,
+    ) -> anyhow::Result<T> {
+        let handle = self.get_handle()?;
         let mut buffer_vec: Vec<u8> = vec![0; std::mem::size_of::<T>()];
         ReadProcessMemory(
-            self.process_handle,
+            handle,
             addr_to_read as *const c_void,
             buffer_vec.as_mut_ptr() as _,
             std::mem::size_of::<T>(),
@@ -106,68 +126,20 @@ impl Process {
     /// Read bytes from the process at the given location addr_to_read
     ///
     pub unsafe fn read_bytes(
-        &self,
+        &mut self,
         addr_to_read: usize,
         size_to_read: usize,
     ) -> anyhow::Result<Vec<u8>> {
-        // Check if valid process
-        if self.process_handle == 0 {
-            Err(ProcessErrors::InvalidHandle)?
-        }
-
+        let handle = self.get_handle()?;
         let mut buffer_vec: Vec<u8> = vec![0; size_to_read];
         ReadProcessMemory(
-            self.process_handle,
+            handle,
             addr_to_read as *const c_void,
             buffer_vec.as_mut_ptr() as _,
             size_to_read,
             None,
         )?;
         Ok(buffer_vec)
-    }
-    /// Iterate loaded modules and execute function 'f' upon each iteration.
-    ///
-    pub unsafe fn iterate_modules<F>(&self, callback: F) -> anyhow::Result<()>
-    where
-        F: Fn(MODULEENTRY32),
-    {
-        // Check if valid process
-        if self.process_id == 0 {
-            Err(ProcessErrors::InvalidProcessFields)?
-        }
-
-        // Get module snapshot
-        let module_snapshot =
-            CreateToolhelp32Snapshot(TH32CS_SNAPMODULE32 | TH32CS_SNAPMODULE, self.process_id)?;
-        // Setup module struct
-        let mut module_entry = MODULEENTRY32::default();
-        // Set struct size
-        module_entry.dwSize = std::mem::size_of::<MODULEENTRY32>() as u32;
-        // Check first module
-        if let Err(e) = Module32First(module_snapshot, &mut module_entry) {
-            CloseHandle(module_snapshot)?;
-            return Err(e.into());
-        }
-        loop {
-            // Execute function f
-            callback(module_entry);
-            // Clear buffer
-            module_entry
-                .szModule
-                .iter_mut()
-                .for_each(|e_byte| *e_byte = 0x0);
-            // Onto next entry
-            match Module32Next(module_snapshot, &mut module_entry) {
-                Ok(_) => continue,
-                Err(e) if e.code() == ERROR_NO_MORE_FILES.into() => break,
-                Err(e) => {
-                    CloseHandle(module_snapshot)?;
-                    return Err(e.into());
-                }
-            }
-        }
-        CloseHandle(module_snapshot)?;
-        Ok(())
     }
     /// Open or return an open handle to a targeted process
     ///
@@ -178,7 +150,7 @@ impl Process {
         }
 
         // Check if handle is already open
-        if self.process_handle != 0 {
+        if !self.process_handle.is_invalid() {
             return Ok(self.process_handle);
         }
 
@@ -195,13 +167,23 @@ impl Process {
         }
 
         // Check if handle is already closed
-        if self.process_handle == 0 {
+        if self.process_handle.is_invalid() {
             Err(ProcessErrors::InvalidHandle)?
         }
 
         // Close otherwise and overwrite handle to default again
         CloseHandle(self.process_handle)?;
-        self.process_handle = 0;
+        self.process_handle = HANDLE::default();
         Ok(())
+    }
+    /// Return process name
+    ///
+    pub fn name(&self) -> String {
+        self.process_name.clone()
+    }
+    /// Return process id
+    ///
+    pub fn pid(&self) -> u32 {
+        self.process_id
     }
 }

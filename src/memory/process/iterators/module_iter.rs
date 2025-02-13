@@ -1,13 +1,13 @@
-use windows::Win32::Foundation::{CloseHandle, ERROR_NO_MORE_FILES, HANDLE};
+use windows::Win32::Foundation::{CloseHandle, HANDLE};
 use windows::Win32::System::Diagnostics::ToolHelp::{
-    CreateToolhelp32Snapshot, Module32First, Module32Next, Process32First, Process32Next,
-    MODULEENTRY32, PROCESSENTRY32, TH32CS_SNAPMODULE, TH32CS_SNAPMODULE32, TH32CS_SNAPPROCESS,
+    CreateToolhelp32Snapshot, Module32First, Module32Next, MODULEENTRY32, TH32CS_SNAPMODULE,
+    TH32CS_SNAPMODULE32,
 };
 
 /// Define our custom iterator for modules, rust iterators are always better than duplicating code
 /// and it will help simplify any future operations within process'
 ///
-struct ModuleIterator {
+pub struct ModuleIterator {
     snap_handle: HANDLE,
     entry: MODULEENTRY32,
     is_first: bool,
@@ -43,29 +43,31 @@ impl Iterator for ModuleIterator {
     /// needed
     ///
     fn next(&mut self) -> Option<Self::Item> {
-        // Check if this is the first entry
-        if self.is_first {
-            if Module32First(self.snap_handle, &mut self.entry).is_err() {
-                return None;
+        unsafe {
+            // Check if this is the first entry
+            if self.is_first {
+                if Module32First(self.snap_handle, &mut self.entry).is_err() {
+                    return None;
+                }
+                self.is_first = false;
+            } else {
+                // Handle all other entries
+                // Onto next entry
+                match Module32Next(self.snap_handle, &mut self.entry) {
+                    Ok(_) => {}
+                    Err(_) => return None,
+                }
             }
-            self.is_first = false;
-        } else {
-            // Handle all other entries
-            // Onto next entry
-            match Module32Next(self.snap_handle, &mut self.entry) {
-                Ok(_) => {}
-                Err(_) => return None,
-            }
-        }
-        // Clone as we're clearing it after this anyway
-        let entry_clone = self.entry;
-        // Clear buffer
-        self.entry
-            .szExeFile
-            .iter_mut()
-            .for_each(|e_byte| *e_byte = 0x0);
+            // Clone as we're clearing it after this anyway
+            let entry_clone = self.entry;
+            // Clear buffer
+            self.entry
+                .szModule
+                .iter_mut()
+                .for_each(|e_byte| *e_byte = 0x0);
 
-        Some(entry_clone)
+            Some(entry_clone)
+        }
     }
 }
 
