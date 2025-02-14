@@ -1,5 +1,6 @@
 use super::iterators::module_iter::ModuleIterator;
 use super::iterators::process_iter::ProcessIterator;
+use super::to_rstr;
 use super::ProcessErrors;
 use std::ffi::c_void;
 use windows::Win32::Foundation::{CloseHandle, HANDLE};
@@ -12,6 +13,7 @@ pub struct Process {
     process_name: String,
     process_handle: HANDLE,
     process_id: u32,
+    process_base: u64,
 }
 
 /// Implement the Drop type for our process struct to automatically close handle on destruction
@@ -31,11 +33,18 @@ impl Process {
     ///
     pub unsafe fn get_processes() -> anyhow::Result<Vec<Self>> {
         ProcessIterator::new()?
-            .map(|(name, pid)| {
+            .map(|entry| {
+                // Get process name
+                let proc_name: String = to_rstr!(entry.szExeFile);
+                let module_base = ModuleIterator::new(entry.th32ProcessID)?
+                    .find(|module| to_rstr!(module.szModule) == proc_name)
+                    .map(|module| module.modBaseAddr as u64);
+
                 Ok(Self {
-                    process_name: name,
+                    process_name: proc_name,
                     process_handle: HANDLE::default(),
-                    process_id: pid,
+                    process_id: entry.th32ProcessID,
+                    process_base: module_base,
                 })
             })
             .collect()
@@ -49,18 +58,26 @@ impl Process {
     ///
     pub unsafe fn find(name_of_process: &str) -> anyhow::Result<Self> {
         ProcessIterator::new()?
-            .find(|(name, _)| name == name_of_process)
-            .map(|(name, pid)| Self {
-                process_name: name,
-                process_handle: HANDLE::default(),
-                process_id: pid,
-            })
-            .ok_or_else(|| {
-                ProcessErrors::ProcessNotFound {
-                    process_name: name_of_process.to_string(),
+            .find(|entry| to_rstr!(entry.szExeFile) == name_of_process)
+            .map(|entry| {
+                // Get process name
+                let proc_name: String = to_rstr!(entry.szExeFile);
+
+                let module_base = ModuleIterator::new(entry.th32ProcessID)
+                    .unwrap()
+                    .find(|module| to_rstr!(module.szModule) == proc_name)
+                    .map(|module| module.modBaseAddr as u64);
+
+                Self {
+                    process_name: proc_name,
+                    process_handle: HANDLE::default(),
+                    process_id: entry.th32ProcessID,
+                    process_base: module_base,
                 }
-                .into()
             })
+            .ok_or_else(|| ProcessErrors::ProcessNotFound {
+                process_name: name_of_process.to_string(),
+            })?
     }
     /// Write value of type T to the given process at location addr_to_write
     ///
@@ -185,5 +202,10 @@ impl Process {
     ///
     pub fn pid(&self) -> u32 {
         self.process_id
+    }
+    /// Return process base
+    ///
+    pub fn base(&self) -> u64 {
+        self.process_base
     }
 }

@@ -34,9 +34,9 @@ impl ProcessIterator {
 /// Define iterator type for struct
 ///
 impl Iterator for ProcessIterator {
-    /// Define our item, we'll only need name + pid
+    /// Define our item, we'll only take the whole entry
     ///
-    type Item = (String, u32);
+    type Item = PROCESSENTRY32;
     /// Define our .next() function, this will be where our iterator moves onto next entries when
     /// needed
     ///
@@ -56,23 +56,15 @@ impl Iterator for ProcessIterator {
                     Err(_) => return None,
                 }
             }
-            // Get process name
-            let proc_name: String = String::from_utf8(
-                self.entry
-                    .szExeFile
-                    .iter()
-                    .map(|&c| c as u8)
-                    .take_while(|&c| c != 0)
-                    .collect::<Vec<u8>>(),
-            )
-            .unwrap();
+            // Copy it since we're going to be clearing the path for next iteration
+            let proc_copy = self.entry;
             // Clear buffer
             self.entry
                 .szExeFile
                 .iter_mut()
                 .for_each(|e_byte| *e_byte = 0x0);
 
-            Some((proc_name, self.entry.th32ProcessID))
+            Some(proc_copy)
         }
     }
 }
