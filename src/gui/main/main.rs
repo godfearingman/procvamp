@@ -1,10 +1,11 @@
+use crate::gui::main::attach::attach::AttachView;
 use crate::gui::main::debug::debug::DebugView;
 use eframe::{egui, NativeOptions};
 
 /// Define views
 ///
 enum View {
-    Attach,
+    Attach(AttachView),
     Debug(DebugView),
 }
 
@@ -14,8 +15,10 @@ struct MyApp {
 
 impl Default for MyApp {
     fn default() -> Self {
-        Self {
-            current_view: View::Attach,
+        unsafe {
+            Self {
+                current_view: View::Attach(AttachView::new().unwrap()),
+            }
         }
     }
 }
@@ -23,7 +26,7 @@ impl Default for MyApp {
 impl eframe::App for MyApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         match &mut self.current_view {
-            View::Attach => {}
+            View::Attach(attach_view) => attach_view.show(ctx),
             View::Debug(dbg_view) => dbg_view.show(ctx),
         }
     }

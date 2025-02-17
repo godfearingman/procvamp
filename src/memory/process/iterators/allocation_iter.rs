@@ -1,7 +1,9 @@
 use super::super::process::Process;
 use std::ffi::c_void;
 use windows::Win32::Foundation::HANDLE;
-use windows::Win32::System::Memory::{VirtualQueryEx, MEMORY_BASIC_INFORMATION};
+use windows::Win32::System::Memory::{
+    VirtualQueryEx, MEMORY_BASIC_INFORMATION, PAGE_PROTECTION_FLAGS,
+};
 
 /// Create an allocation iteration struct, this will let us iterate through every valid allocation
 /// within a process that's passed to the 'new' constructor
@@ -15,17 +17,23 @@ struct Allocation {
 impl Allocation {
     /// Simple constructor for our iteration, we'll need the handle and base address to start from
     ///
-    pub unsafe fn new(process: Process) -> anyhow::Result<Self> {
+    pub unsafe fn new(process: &mut Process) -> anyhow::Result<Self> {
+        let handle = process.get_handle()?;
+        let base = process.base()?;
+
         Ok(Self {
-            process_handle: process.get_handle()?,
+            process_handle: handle,
             entry: MEMORY_BASIC_INFORMATION::default(),
-            curr_addr: process.base(),
+            curr_addr: base,
         })
     }
     /// Filter allocations with a certain protection
     ///
-    pub fn with_protection(self, prot: u32) -> impl Iterator<Item = MEMORY_BASIC_INFORMATION> {
-        self.filter(move |entry| entry.Protection == prot)
+    pub fn with_protection(
+        self,
+        prot: PAGE_PROTECTION_FLAGS,
+    ) -> impl Iterator<Item = MEMORY_BASIC_INFORMATION> {
+        self.filter(move |entry| entry.Protect == prot)
     }
 }
 
@@ -54,7 +62,7 @@ impl Iterator for Allocation {
                 return None;
             }
 
-            self.curr_addr = match self.curr_addr.checked_add(self.entry.RegionSize) {
+            self.curr_addr = match self.curr_addr.checked_add(self.entry.RegionSize as u64) {
                 Some(addr) => addr,
                 None => return None,
             };

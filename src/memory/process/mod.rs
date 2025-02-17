@@ -7,14 +7,13 @@ use thiserror::Error;
 #[macro_export]
 macro_rules! to_rstr {
     ($arr:expr) => {
-        String::from_utf8_lossy(
+        String::from_utf8(
             $arr.iter()
-                .szExeFile
-                .iter()
                 .map(|&c| c as u8)
                 .take_while(|&c| c != 0)
                 .collect::<Vec<u8>>(),
         )
+        .unwrap()
     };
 }
 
@@ -29,4 +28,6 @@ pub enum ProcessErrors {
     InvalidHandle,
     #[error("Failed to find process '{process_name}")]
     ProcessNotFound { process_name: String },
+    #[error("Failed to find module '{module_name}")]
+    ModuleNotFound { module_name: String },
 }

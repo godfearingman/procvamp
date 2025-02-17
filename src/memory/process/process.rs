@@ -1,7 +1,7 @@
 use super::iterators::module_iter::ModuleIterator;
 use super::iterators::process_iter::ProcessIterator;
-use super::to_rstr;
 use super::ProcessErrors;
+use crate::to_rstr;
 use std::ffi::c_void;
 use windows::Win32::Foundation::{CloseHandle, HANDLE};
 use windows::Win32::System::Diagnostics::Debug::{ReadProcessMemory, WriteProcessMemory};
@@ -36,15 +36,12 @@ impl Process {
             .map(|entry| {
                 // Get process name
                 let proc_name: String = to_rstr!(entry.szExeFile);
-                let module_base = ModuleIterator::new(entry.th32ProcessID)?
-                    .find(|module| to_rstr!(module.szModule) == proc_name)
-                    .map(|module| module.modBaseAddr as u64);
 
                 Ok(Self {
                     process_name: proc_name,
                     process_handle: HANDLE::default(),
                     process_id: entry.th32ProcessID,
-                    process_base: module_base,
+                    process_base: u64::default(),
                 })
             })
             .collect()
@@ -63,17 +60,12 @@ impl Process {
                 // Get process name
                 let proc_name: String = to_rstr!(entry.szExeFile);
 
-                let module_base = ModuleIterator::new(entry.th32ProcessID)
-                    .unwrap()
-                    .find(|module| to_rstr!(module.szModule) == proc_name)
-                    .map(|module| module.modBaseAddr as u64);
-
-                Self {
+                Ok(Self {
                     process_name: proc_name,
                     process_handle: HANDLE::default(),
                     process_id: entry.th32ProcessID,
-                    process_base: module_base,
-                }
+                    process_base: u64::default(),
+                })
             })
             .ok_or_else(|| ProcessErrors::ProcessNotFound {
                 process_name: name_of_process.to_string(),
@@ -205,7 +197,15 @@ impl Process {
     }
     /// Return process base
     ///
-    pub fn base(&self) -> u64 {
-        self.process_base
+    pub unsafe fn base(&mut self) -> anyhow::Result<u64> {
+        if self.process_base == u64::default() {
+            self.process_base = ModuleIterator::new(self.process_id)?
+                .find(|module| to_rstr!(module.szModule) == self.process_name.clone())
+                .map(|module| module.modBaseAddr as u64)
+                .ok_or_else(|| ProcessErrors::ModuleNotFound {
+                    module_name: self.process_name.clone(),
+                })?;
+        }
+        Ok(self.process_base)
     }
 }
