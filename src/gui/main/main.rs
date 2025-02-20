@@ -26,7 +26,11 @@ impl Default for MyApp {
 impl eframe::App for MyApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         match &mut self.current_view {
-            View::Attach(attach_view) => attach_view.show(ctx),
+            View::Attach(attach_view) => {
+                if let Some(proc) = attach_view.show(ctx) {
+                    self.current_view = View::Debug(DebugView::new(proc));
+                }
+            }
             View::Debug(dbg_view) => dbg_view.show(ctx),
         }
     }

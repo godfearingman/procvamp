@@ -4,6 +4,7 @@ use crate::gui::gui::WindowType;
 use crate::gui::windows::disassembly_view::disassembly_view::DisassemblyView;
 use crate::gui::windows::function_view::function_view::FunctionView;
 use crate::gui::windows::ActiveWindows;
+use crate::process::Process;
 use eframe::{egui, NativeOptions};
 use egui_dock::{DockArea, DockState, NodeIndex, Style};
 
@@ -49,11 +50,11 @@ impl egui_dock::TabViewer for TabViewer {
 
 pub struct DebugView {
     tree: DockState<Window<Tab>>,
-    pid: u32,
+    process: Process,
 }
 
 impl DebugView {
-    pub fn new(pid: u32) -> Self {
+    pub fn new(process: Process) -> Self {
         // Setup our initial view of the entire window
         //
         let mut windows_manager = ActiveWindows::default();
@@ -113,7 +114,7 @@ impl DebugView {
             windows_manager.tabs.clone(),
         );
 
-        Self { tree, pid }
+        Self { tree, process }
     }
 }
 
