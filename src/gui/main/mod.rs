@@ -1,6 +1,7 @@
 pub mod attach;
 pub mod debug;
 pub mod main;
+pub mod toolbar;
 use egui::Color32;
 
 // Our struct used for theme colours
@@ -13,11 +14,11 @@ pub struct ThemeColours {
     pub highlight: Color32,
 }
 
-// Define some colours
-//
-//
-// Start off with dark theme
-//
+/// Define some colours
+///
+
+/// Start off with dark theme
+///
 pub const DARK_THEME: ThemeColours = ThemeColours {
     // Deep blood red
     primary: Color32::from_rgb(140, 0, 0),

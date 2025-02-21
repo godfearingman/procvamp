@@ -147,3 +147,29 @@ Added more `Table` columns than were pre-allocated (1 pre-allocated)
 [2025-02-20T02:11:49Z DEBUG procvamp] Initialised logging system
 [2025-02-20T02:12:15Z DEBUG procvamp] Initialised logging system
 [2025-02-20T02:12:44Z DEBUG procvamp] Initialised logging system
+[2025-02-20T02:38:39Z DEBUG procvamp] Initialised logging system
+[2025-02-21T01:42:29Z DEBUG procvamp] Initialised logging system
+[2025-02-21T01:43:19Z DEBUG procvamp] Initialised logging system
+[2025-02-21T01:44:21Z DEBUG procvamp] Initialised logging system
+[2025-02-21T01:45:18Z DEBUG procvamp] Initialised logging system
+[2025-02-21T01:45:43Z DEBUG procvamp] Initialised logging system
+[2025-02-21T01:48:23Z DEBUG procvamp] Initialised logging system
+[2025-02-21T01:49:14Z DEBUG procvamp] Initialised logging system
+[2025-02-21T01:49:55Z DEBUG procvamp] Initialised logging system
+[2025-02-21T01:51:04Z DEBUG procvamp] Initialised logging system
+[2025-02-21T02:39:53Z DEBUG procvamp] Initialised logging system
+[2025-02-21T02:39:55Z ERROR procvamp::log::log] panicked at C:\Users\dx9\.cargo\registry\src\index.crates.io-6f17d22bba15001f\egui_dock-0.14.0\src\dock_state\tree\mod.rs:477:9:
+assertion `left != right` failed
+  left: 0
+ right: 0
+[2025-02-21T02:42:05Z DEBUG procvamp] Initialised logging system
+[2025-02-21T03:28:09Z DEBUG procvamp] Initialised logging system
+[2025-02-21T04:02:02Z DEBUG procvamp] Initialised logging system
+[2025-02-21T04:29:43Z DEBUG procvamp] Initialised logging system
+[2025-02-21T04:30:40Z DEBUG procvamp] Initialised logging system
+[2025-02-21T04:34:02Z DEBUG procvamp] Initialised logging system
+[2025-02-21T04:35:59Z DEBUG procvamp] Initialised logging system
+[2025-02-21T04:37:00Z DEBUG procvamp] Initialised logging system
+[2025-02-21T04:41:11Z DEBUG procvamp] Initialised logging system
+[2025-02-21T04:41:33Z DEBUG procvamp] Initialised logging system
+[2025-02-21T04:43:43Z DEBUG procvamp] Initialised logging system

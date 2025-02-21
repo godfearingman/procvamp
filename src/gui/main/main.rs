@@ -25,6 +25,7 @@ impl Default for MyApp {
 
 impl eframe::App for MyApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // Show menu bar
         match &mut self.current_view {
             View::Attach(attach_view) => {
                 if let Some(proc) = attach_view.show(ctx) {
