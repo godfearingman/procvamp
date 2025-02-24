@@ -4,6 +4,11 @@ pub mod main;
 pub mod toolbar;
 use egui::Color32;
 
+use crate::gui::gui::TabContent;
+use crate::gui::gui::Window;
+use crate::gui::windows::disassembly_view::disassembly_view::DisassemblyView;
+use crate::gui::windows::function_view::function_view::FunctionView;
+
 // Our struct used for theme colours
 //
 pub struct ThemeColours {
@@ -31,3 +36,43 @@ pub const DARK_THEME: ThemeColours = ThemeColours {
     // Brighter blood red for highlights
     highlight: Color32::from_rgb(196, 27, 27),
 };
+
+// Another enum which will map entries to actual views
+//
+#[derive(Clone)]
+pub enum Tab {
+    Disassembly(DisassemblyView),
+    Function(FunctionView),
+}
+
+// Handle abstract tab system, here we'll just match the enum members to what is currently
+// active
+//
+impl TabContent for Tab {
+    fn ui(&mut self, ui: &mut egui::Ui) {
+        match self {
+            Tab::Disassembly(view) => view.ui(ui),
+            Tab::Function(view) => view.ui(ui),
+        }
+    }
+    fn title(&self) -> String {
+        match self {
+            Tab::Disassembly(view) => view.title(),
+            Tab::Function(view) => view.title(),
+        }
+    }
+}
+
+struct TabViewer {}
+
+impl egui_dock::TabViewer for TabViewer {
+    type Tab = Window<Tab>;
+
+    fn title(&mut self, tab: &mut Self::Tab) -> egui::WidgetText {
+        tab.win_content.title().into()
+    }
+
+    fn ui(&mut self, ui: &mut egui::Ui, tab: &mut Self::Tab) {
+        tab.win_content.ui(ui);
+    }
+}

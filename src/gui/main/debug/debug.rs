@@ -1,53 +1,14 @@
-use crate::gui::gui::TabContent;
-use crate::gui::gui::Window;
 use crate::gui::gui::WindowType;
 use crate::gui::main::toolbar::toolbar::show_bar;
+use crate::gui::main::Tab;
+use crate::gui::main::TabViewer;
+use crate::gui::main::Window;
 use crate::gui::windows::disassembly_view::disassembly_view::DisassemblyView;
 use crate::gui::windows::function_view::function_view::FunctionView;
 use crate::gui::windows::ActiveWindows;
 use crate::process::Process;
-use eframe::{egui, NativeOptions};
+use eframe::egui;
 use egui_dock::{DockArea, DockState, NodeIndex, Style};
-
-// Another enum which will map entries to actual views
-//
-#[derive(Clone)]
-pub enum Tab {
-    Disassembly(DisassemblyView),
-    Function(FunctionView),
-}
-
-// Handle abstract tab system, here we'll just match the enum members to what is currently
-// active
-//
-impl TabContent for Tab {
-    fn ui(&mut self, ui: &mut egui::Ui) {
-        match self {
-            Tab::Disassembly(view) => view.ui(ui),
-            Tab::Function(view) => view.ui(ui),
-        }
-    }
-    fn title(&self) -> String {
-        match self {
-            Tab::Disassembly(view) => view.title(),
-            Tab::Function(view) => view.title(),
-        }
-    }
-}
-
-struct TabViewer {}
-
-impl egui_dock::TabViewer for TabViewer {
-    type Tab = Window<Tab>;
-
-    fn title(&mut self, tab: &mut Self::Tab) -> egui::WidgetText {
-        tab.win_content.title().into()
-    }
-
-    fn ui(&mut self, ui: &mut egui::Ui, tab: &mut Self::Tab) {
-        tab.win_content.ui(ui);
-    }
-}
 
 pub struct DebugView {
     tree: DockState<Window<Tab>>,
@@ -55,7 +16,7 @@ pub struct DebugView {
     windows_manager: ActiveWindows<Tab>,
     left_index: Option<NodeIndex>,
     _right_index: Option<NodeIndex>,
-    bottom_index: Option<NodeIndex>,
+    _bottom_index: Option<NodeIndex>,
     temp_bool: bool,
 }
 
@@ -125,7 +86,7 @@ impl DebugView {
             windows_manager,
             left_index: None,
             _right_index: None,
-            bottom_index: None,
+            _bottom_index: None,
             temp_bool: false,
         }
     }
@@ -138,9 +99,11 @@ impl DebugView {
             // We'll need to make it a vertical setup so that our toolbar is above the docking area
             ui.vertical(|ui| {
                 // Show our tool bar
-                show_bar(ui);
+                if let Some(tab) = show_bar(ui, &mut self.process) {
+                    self.add_tab(tab);
+                }
 
-                if !self.temp_bool {
+                /*if !self.temp_bool {
                     self.temp_bool = true;
                     // Setup our dummy function view
                     //
@@ -178,7 +141,7 @@ impl DebugView {
                     self.add_tab(disasm_win2);
                     self.add_tab(disasm_win3);
                     self.add_tab(func_win);
-                }
+                }*/
 
                 ui.add_space(3.0);
                 // Show our tabs

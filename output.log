@@ -173,3 +173,10 @@ assertion `left != right` failed
 [2025-02-21T04:41:11Z DEBUG procvamp] Initialised logging system
 [2025-02-21T04:41:33Z DEBUG procvamp] Initialised logging system
 [2025-02-21T04:43:43Z DEBUG procvamp] Initialised logging system
+[2025-02-24T14:07:10Z DEBUG procvamp] Initialised logging system
+[2025-02-24T14:53:49Z DEBUG procvamp] Initialised logging system
+[2025-02-24T14:55:42Z DEBUG procvamp] Initialised logging system
+[2025-02-24T14:56:53Z DEBUG procvamp] Initialised logging system
+[2025-02-24T15:32:43Z DEBUG procvamp] Initialised logging system
+[2025-02-24T16:47:21Z ERROR procvamp::log::log] panicked at src\gui\main\toolbar\toolbar.rs:24:61:
+called `Result::unwrap()` on an `Err` value: Access is denied. (0x80070005)
