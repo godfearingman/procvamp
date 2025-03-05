@@ -3,8 +3,6 @@ use crate::gui::main::toolbar::toolbar::show_bar;
 use crate::gui::main::Tab;
 use crate::gui::main::TabViewer;
 use crate::gui::main::Window;
-use crate::gui::windows::disassembly_view::disassembly_view::DisassemblyView;
-use crate::gui::windows::function_view::function_view::FunctionView;
 use crate::gui::windows::ActiveWindows;
 use crate::process::Process;
 use eframe::egui;
@@ -15,9 +13,7 @@ pub struct DebugView {
     process: Process,
     windows_manager: ActiveWindows<Tab>,
     left_index: Option<NodeIndex>,
-    _right_index: Option<NodeIndex>,
-    _bottom_index: Option<NodeIndex>,
-    temp_bool: bool,
+    bottom_index: Option<NodeIndex>,
 }
 
 impl DebugView {
@@ -46,7 +42,7 @@ impl DebugView {
                 }
             }
             // Middle tabs are most trivial, just add it directly to middle
-            WindowType::DisassemblyView => {
+            WindowType::DisassemblyView | WindowType::ImportsView => {
                 self.tree
                     .main_surface_mut()
                     .set_focused_node(NodeIndex::root());
@@ -55,20 +51,20 @@ impl DebugView {
             // Anything else is yet to be decided wher it would go so we'll stick it at the bottom
             // instead
             _ => {
-                if let Some(right_idx) = self._right_index {
-                    self.tree.main_surface_mut().set_focused_node(right_idx);
+                if let Some(bottom_idx) = self.bottom_index {
+                    self.tree.main_surface_mut().set_focused_node(bottom_idx);
                     self.tree.main_surface_mut().push_to_focused_leaf(window);
-                    self._right_index = self.tree.main_surface().focused_leaf();
+                    self.bottom_index = self.tree.main_surface().focused_leaf();
                 }
                 // If there's no existing right split we'll just need to create it like we did with
                 // the left panel
                 else {
-                    let [_, new_right] = self.tree.main_surface_mut().split_right(
+                    let [_, new_bottom] = self.tree.main_surface_mut().split_below(
                         NodeIndex::root(),
                         0.6,
                         vec![window],
                     );
-                    self._right_index = Some(new_right);
+                    self.bottom_index = Some(new_bottom);
                 }
             }
         }
@@ -85,9 +81,7 @@ impl DebugView {
             process,
             windows_manager,
             left_index: None,
-            _right_index: None,
-            _bottom_index: None,
-            temp_bool: false,
+            bottom_index: None,
         }
     }
 }

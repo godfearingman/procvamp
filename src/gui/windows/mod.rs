@@ -41,5 +41,7 @@ impl<T: TabContent> ActiveWindows<T> {
 pub mod disassembly_view;
 pub mod function_view;
 pub mod graph_view;
+pub mod imports_view;
+pub mod module_view;
 pub mod scanner_results;
 pub mod scanner_view;

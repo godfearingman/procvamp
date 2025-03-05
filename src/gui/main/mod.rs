@@ -8,6 +8,8 @@ use crate::gui::gui::TabContent;
 use crate::gui::gui::Window;
 use crate::gui::windows::disassembly_view::disassembly_view::DisassemblyView;
 use crate::gui::windows::function_view::function_view::FunctionView;
+use crate::gui::windows::imports_view::imports_view::ImportsView;
+use crate::gui::windows::module_view::module_view::ModuleView;
 
 // Our struct used for theme colours
 //
@@ -43,6 +45,8 @@ pub const DARK_THEME: ThemeColours = ThemeColours {
 pub enum Tab {
     Disassembly(DisassemblyView),
     Function(FunctionView),
+    Module(ModuleView),
+    Imports(ImportsView),
 }
 
 // Handle abstract tab system, here we'll just match the enum members to what is currently
@@ -53,12 +57,16 @@ impl TabContent for Tab {
         match self {
             Tab::Disassembly(view) => view.ui(ui),
             Tab::Function(view) => view.ui(ui),
+            Tab::Module(view) => view.ui(ui),
+            Tab::Imports(view) => view.ui(ui),
         }
     }
     fn title(&self) -> String {
         match self {
             Tab::Disassembly(view) => view.title(),
             Tab::Function(view) => view.title(),
+            Tab::Module(view) => view.title(),
+            Tab::Imports(view) => view.title(),
         }
     }
 }

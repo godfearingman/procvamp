@@ -12,13 +12,5 @@ fn main() -> eframe::Result<()> {
     }
     ::log::debug!("Initialised logging system");
 
-    unsafe {
-        process::Process::get_processes()
-            .unwrap()
-            .iter()
-            .for_each(|proc| {
-                println!("proc {0} : pid {1}", proc.name(), proc.pid());
-            });
-    }
     run_gui()
 }

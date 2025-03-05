@@ -10,6 +10,9 @@ pub mod gui {
         ScannerView,
         ScannerResults,
         GraphView,
+        ModuleView,
+        AllocationView,
+        ImportsView,
     }
     // Basic struct for defining windows and what type they are
     //

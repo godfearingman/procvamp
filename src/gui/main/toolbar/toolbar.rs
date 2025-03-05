@@ -2,6 +2,8 @@ use crate::gui::gui::Window;
 use crate::gui::gui::WindowType;
 use crate::gui::main::Tab;
 use crate::gui::windows::disassembly_view::disassembly_view::DisassemblyView;
+use crate::gui::windows::imports_view::imports_view::ImportsView;
+use crate::gui::windows::module_view::module_view::ModuleView;
 use crate::memory::process::process::Process;
 use eframe::egui;
 
@@ -30,6 +32,34 @@ pub fn show_bar(ui: &mut egui::Ui, process: &mut Process) -> Option<Window<Tab>>
                     }),
                 ));
             }
+            let module_button = ui.button("Modules");
+            if module_button.clicked() {
+                // Get all loaded modules and send it over instead of sending over the entire
+                // process struct
+                let process_modules = unsafe { process.get_modules().unwrap() };
+                new_window = Some(Window::new(
+                    WindowType::ModuleView,
+                    Tab::Module(ModuleView {
+                        modules: process_modules,
+                        selected_module: None,
+                        selected_module_enum: None,
+                    }),
+                ));
+            }
+            let imports_button = ui.button("Imports");
+            if imports_button.clicked() {
+                // Get all loaded modules again and send it over
+                let process_modules = unsafe { process.get_modules().unwrap() };
+                new_window = Some(Window::new(
+                    WindowType::ImportsView,
+                    Tab::Imports(ImportsView {
+                        modules: process_modules,
+                        selected_module: None,
+                        selected_function: None,
+                    }),
+                ));
+            }
+            let _ = ui.button("Allocations");
             let _ = ui.button("Function");
             let _ = ui.button("Graph");
             let _ = ui.button("Scanner");
