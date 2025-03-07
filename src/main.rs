@@ -1,6 +1,7 @@
 mod gui;
 mod log;
 mod memory;
+mod pe;
 use crate::gui::main::main::run_gui;
 use crate::log::log::setup_logger;
 

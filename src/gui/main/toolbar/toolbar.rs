@@ -54,8 +54,10 @@ pub fn show_bar(ui: &mut egui::Ui, process: &mut Process) -> Option<Window<Tab>>
                     WindowType::ImportsView,
                     Tab::Imports(ImportsView {
                         modules: process_modules,
+                        selected_module_enum: None,
                         selected_module: None,
                         selected_function: None,
+                        frame_width: None,
                     }),
                 ));
             }
