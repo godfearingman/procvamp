@@ -5,6 +5,7 @@ use crate::gui::windows::disassembly_view::disassembly_view::DisassemblyView;
 use crate::gui::windows::imports_view::imports_view::ImportsView;
 use crate::gui::windows::module_view::module_view::ModuleView;
 use crate::memory::process::process::Process;
+use crate::to_rstr;
 use eframe::egui;
 
 /// Realistically we don't need any function other than show_bar so we won't create a struct but
@@ -48,16 +49,23 @@ pub fn show_bar(ui: &mut egui::Ui, process: &mut Process) -> Option<Window<Tab>>
             }
             let imports_button = ui.button("Imports");
             if imports_button.clicked() {
-                // Get all loaded modules again and send it over
                 let process_modules = unsafe { process.get_modules().unwrap() };
+                let process_path = process_modules
+                    .iter()
+                    .find(|module| to_rstr!(module.szModule) == process.name())
+                    .map(|module| to_rstr!(module.szExePath))
+                    .unwrap();
+
                 new_window = Some(Window::new(
                     WindowType::ImportsView,
                     Tab::Imports(ImportsView {
-                        modules: process_modules,
                         selected_module_enum: None,
                         selected_module: None,
                         selected_function: None,
+                        selected_function_enum: None,
+                        process_path: Some(process_path),
                         frame_width: None,
+                        pe_file: None,
                     }),
                 ));
             }

@@ -279,3 +279,31 @@ called `Result::unwrap()` on an `Err` value: Access is denied. (0x80070005)
 [2025-03-07T04:07:42Z DEBUG procvamp] Initialised logging system
 [2025-03-07T04:08:23Z DEBUG procvamp] Initialised logging system
 [2025-03-07T04:10:30Z DEBUG procvamp] Initialised logging system
+[2025-03-08T00:11:15Z DEBUG procvamp] Initialised logging system
+[2025-03-08T00:11:22Z ERROR procvamp::log::log] panicked at src\gui\windows\imports_view\imports_view.rs:107:60:
+called `Result::unwrap()` on an `Err` value: Module not found
+[2025-03-08T00:14:03Z DEBUG procvamp] Initialised logging system
+[2025-03-08T00:14:10Z ERROR procvamp::log::log] panicked at src\gui\windows\imports_view\imports_view.rs:107:60:
+called `Result::unwrap()` on an `Err` value: Module win32u.dll not found
+[2025-03-08T00:14:16Z DEBUG procvamp] Initialised logging system
+[2025-03-08T00:14:29Z ERROR procvamp::log::log] panicked at src\gui\windows\imports_view\imports_view.rs:107:60:
+called `Result::unwrap()` on an `Err` value: Module procvamp.exe not found
+[2025-03-08T00:14:33Z DEBUG procvamp] Initialised logging system
+[2025-03-08T01:18:09Z DEBUG procvamp] Initialised logging system
+[2025-03-08T01:25:35Z DEBUG procvamp] Initialised logging system
+[2025-03-08T01:26:28Z DEBUG procvamp] Initialised logging system
+[2025-03-08T01:36:53Z DEBUG procvamp] Initialised logging system
+[2025-03-08T01:38:43Z DEBUG procvamp] Initialised logging system
+[2025-03-08T01:39:03Z DEBUG procvamp] Initialised logging system
+[2025-03-08T01:41:13Z DEBUG procvamp] Initialised logging system
+[2025-03-08T01:41:18Z ERROR procvamp::log::log] panicked at src\gui\windows\imports_view\imports_view.rs:63:63:
+called `Result::unwrap()` on an `Err` value: PKBuffer error: bad alignment: expected 4-byte alignment, but alignment is off by 2
+
+Caused by:
+    bad alignment: expected 4-byte alignment, but alignment is off by 2
+[2025-03-08T01:41:26Z DEBUG procvamp] Initialised logging system
+[2025-03-08T01:41:32Z ERROR procvamp::log::log] panicked at src\gui\windows\imports_view\imports_view.rs:63:63:
+called `Result::unwrap()` on an `Err` value: PKBuffer error: bad alignment: expected 4-byte alignment, but alignment is off by 2
+
+Caused by:
+    bad alignment: expected 4-byte alignment, but alignment is off by 2
