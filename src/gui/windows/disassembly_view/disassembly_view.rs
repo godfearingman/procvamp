@@ -1,66 +1,157 @@
+use super::{format_bytes_to_string, InstructionFormatterOutput};
 use crate::gui::gui::selectable_bp;
 use crate::gui::gui::TabContent;
 use crate::gui::main::DARK_THEME;
+use crate::process::Process;
 use egui::{RichText, TextStyle, Ui};
+use iced_x86::IntelFormatter;
+use iced_x86::{Decoder, DecoderOptions, Formatter, Instruction};
 
-// Create out custom TabContent object for this specific tab, in this case it will be for our
-// disassembly view
-//
+/// Create out custom TabContent object for this specific tab, in this case it will be for our
+/// Disassembly view
+///
 #[derive(Clone)]
 pub struct DisassemblyView {
     pub address_start: u64,
-    //pub bytes: Vec<u8>,
+    pub process: Process,
+    pub bytes: Vec<u8>,
+    pub instructions: Vec<(u64, Instruction, String)>,
+    pub bytes_read: usize,
 }
 
-// Form abstract link to TabContent
-//
+impl DisassemblyView {
+    /// Helper function to manually refresh the disassembly
+    ///
+    fn refresh_disassembly(&mut self) -> anyhow::Result<()> {
+        const READ_SIZE: usize = 512;
+
+        unsafe {
+            self.bytes = self
+                .process
+                .read_bytes_paged(self.address_start as usize, READ_SIZE)?;
+            self.bytes_read = self.bytes.len();
+
+            self.disassemble_bytes();
+        }
+
+        Ok(())
+    }
+
+    /// Helper function to  quickly disassemble the bytes that have been read
+    ///
+    fn disassemble_bytes(&mut self) {
+        self.instructions.clear();
+
+        if self.bytes.is_empty() {
+            return;
+        }
+
+        // Create a decoder for 64-bit code
+        let mut decoder = Decoder::with_ip(
+            64,                   // 64-bit code
+            &self.bytes,          // Code buffer
+            self.address_start,   // IP (instruction pointer)
+            DecoderOptions::NONE, // No special options
+        );
+
+        // Format the decoded instructions
+        let mut formatter = IntelFormatter::new();
+        formatter.options_mut().set_first_operand_char_index(10);
+
+        // Decode all instructions
+        let mut instruction = Instruction::default();
+        let mut output = InstructionFormatterOutput::new();
+
+        while decoder.can_decode() {
+            let offset = decoder.position();
+            decoder.decode_out(&mut instruction);
+
+            // Format the instruction to a string
+            output.clear();
+            formatter.format(&instruction, &mut output);
+            let formatted = output.to_string();
+
+            // Store the instruction with its address and formatted text
+            self.instructions.push((
+                self.address_start + offset as u64,
+                instruction.clone(),
+                formatted,
+            ));
+        }
+    }
+}
+
+/// Form abstract link to TabContent
+///
 impl TabContent for DisassemblyView {
-    // TODO: Disassemble the region from start to start + some_magic_value where the magic value is
-    // according to the current resolution of the tab, we don't want to overread for no reason
-    // UNLESS that is specifically set, I think we should read AT LEAST 512 bytes from anywhere to
-    // prevent working set unless specified otherwise.
-    //
     fn ui(&mut self, ui: &mut Ui) {
-        // For now, we're just going to use some placeholder code to showcase how the output should
-        // look like in the future once we get the disassembler actually set up
-        //
         egui::Frame::none()
             .fill(DARK_THEME.background_dark)
             .inner_margin(10.0)
             .show(ui, |ui| {
+                ui.horizontal(|ui| {
+                    if ui.button("Refresh").clicked() {
+                        let _ = self.refresh_disassembly();
+                    }
+
+                    ui.separator();
+
+                    ui.label("Go to address:");
+
+                    static mut ADDRESS_INPUT: String = String::new();
+                    let addr_input = unsafe { &mut ADDRESS_INPUT };
+
+                    if ui.text_edit_singleline(addr_input).lost_focus()
+                        && ui.input(|i| i.key_pressed(egui::Key::Enter))
+                    {
+                        if let Ok(addr) =
+                            u64::from_str_radix(addr_input.trim_start_matches("0x"), 16)
+                        {
+                            self.address_start = addr;
+                            let _ = self.refresh_disassembly();
+                        }
+                    }
+                });
+
+                ui.separator();
+
                 egui::ScrollArea::vertical().show(ui, |ui| {
-                    // Eventually we'll need to switch to a method that figures out how much free
-                    // space is currently available on the current tab (As it is resizable at the
-                    // moment) and just display that amount. Or we can just read the default set
-                    // size and since this is a scroll area, there isn't much bad that can happen.
-                    //
-                    for i in 0..512 {
+                    // Display all decoded instructions
+                    for (_i, (addr, instruction, formatted)) in self.instructions.iter().enumerate()
+                    {
                         ui.horizontal(|ui| {
-                            // Change the spacing for the breakpoint button to be closer and then
-                            // change it back to normal after
-                            //
+                            // Spacing for the breakpoint button
                             ui.spacing_mut().item_spacing.x = 5.0;
-                            // TODO: We want to check if the current address has a breakpoint over it or
-                            // not for the coloring so we'll need to do that after we create both
-                            // the software breakpoint struct and the hardware breakpoint struct.
-                            // We'll construct it and ideally push it into this struct through the
-                            // enum construction as this is the only visible class that needs it
-                            // unless we add another view to inspect breakpoints.
                             selectable_bp(ui, None);
 
                             ui.spacing_mut().item_spacing.x = 30.0;
+
+                            // Display address
                             ui.label(
-                                RichText::new(format!("{:016X}", self.address_start + (i * 8)))
+                                RichText::new(format!("{:016X}", addr))
                                     .color(DARK_THEME.primary)
                                     .text_style(TextStyle::Monospace),
                             );
+
+                            // Get bytes for this instruction
+                            let instr_size = instruction.len();
+                            let offset = (*addr - self.address_start) as usize;
+
+                            let bytes_str = if offset + instr_size <= self.bytes.len() {
+                                format_bytes_to_string(&self.bytes[offset..offset + instr_size])
+                            } else {
+                                "?? ?? ?? ??".to_string()
+                            };
+
                             ui.label(
-                                RichText::new("00 00 00 00 00 00 00 00")
+                                RichText::new(bytes_str)
                                     .color(DARK_THEME.secondary)
                                     .text_style(TextStyle::Monospace),
                             );
+
+                            // Display disassembled text
                             ui.label(
-                                RichText::new("Disassembler text")
+                                RichText::new(formatted)
                                     .color(DARK_THEME.text_muted)
                                     .text_style(TextStyle::Monospace),
                             );
@@ -69,8 +160,9 @@ impl TabContent for DisassemblyView {
                 });
             });
     }
-    // Handle our name of the tab
-    //
+
+    /// Handle our name of the tab
+    ///
     fn title(&self) -> String {
         return format!("[>] Disassembly ({:X})", self.address_start);
     }

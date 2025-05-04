@@ -38,6 +38,7 @@ impl<T: TabContent> ActiveWindows<T> {
     }
 }
 
+pub mod allocation_view;
 pub mod disassembly_view;
 pub mod function_view;
 pub mod graph_view;

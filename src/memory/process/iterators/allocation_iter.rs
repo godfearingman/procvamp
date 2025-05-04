@@ -8,7 +8,7 @@ use windows::Win32::System::Memory::{
 /// Create an allocation iteration struct, this will let us iterate through every valid allocation
 /// within a process that's passed to the 'new' constructor
 ///
-struct Allocation {
+pub struct Allocation {
     process_handle: HANDLE,
     entry: MEMORY_BASIC_INFORMATION,
     curr_addr: u64,
@@ -19,12 +19,11 @@ impl Allocation {
     ///
     pub unsafe fn new(process: &mut Process) -> anyhow::Result<Self> {
         let handle = process.get_handle()?;
-        let base = process.base()?;
 
         Ok(Self {
             process_handle: handle,
             entry: MEMORY_BASIC_INFORMATION::default(),
-            curr_addr: base,
+            curr_addr: 0,
         })
     }
     /// Filter allocations with a certain protection

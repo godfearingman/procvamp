@@ -6,10 +6,12 @@ use egui::Color32;
 
 use crate::gui::gui::TabContent;
 use crate::gui::gui::Window;
+use crate::gui::windows::allocation_view::allocation_view::AllocationView;
 use crate::gui::windows::disassembly_view::disassembly_view::DisassemblyView;
 use crate::gui::windows::function_view::function_view::FunctionView;
 use crate::gui::windows::imports_view::imports_view::ImportsView;
 use crate::gui::windows::module_view::module_view::ModuleView;
+use crate::gui::windows::scanner_view::scanner_view::ScannerView;
 
 // Our struct used for theme colours
 //
@@ -47,6 +49,8 @@ pub enum Tab {
     Function(FunctionView),
     Module(ModuleView),
     Imports(ImportsView),
+    Allocations(AllocationView),
+    Scanner(ScannerView),
 }
 
 // Handle abstract tab system, here we'll just match the enum members to what is currently
@@ -59,6 +63,8 @@ impl TabContent for Tab {
             Tab::Function(view) => view.ui(ui),
             Tab::Module(view) => view.ui(ui),
             Tab::Imports(view) => view.ui(ui),
+            Tab::Allocations(view) => view.ui(ui),
+            Tab::Scanner(view) => view.ui(ui),
         }
     }
     fn title(&self) -> String {
@@ -67,6 +73,8 @@ impl TabContent for Tab {
             Tab::Function(view) => view.title(),
             Tab::Module(view) => view.title(),
             Tab::Imports(view) => view.title(),
+            Tab::Allocations(view) => view.title(),
+            Tab::Scanner(view) => view.title(),
         }
     }
 }

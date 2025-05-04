@@ -42,7 +42,10 @@ impl DebugView {
                 }
             }
             // Middle tabs are most trivial, just add it directly to middle
-            WindowType::DisassemblyView | WindowType::ImportsView => {
+            WindowType::DisassemblyView
+            | WindowType::ImportsView
+            | WindowType::AllocationView
+            | WindowType::ScannerView => {
                 self.tree
                     .main_surface_mut()
                     .set_focused_node(NodeIndex::root());

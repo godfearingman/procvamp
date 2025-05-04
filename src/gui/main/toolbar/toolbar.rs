@@ -1,9 +1,14 @@
 use crate::gui::gui::Window;
 use crate::gui::gui::WindowType;
 use crate::gui::main::Tab;
+use crate::gui::windows::allocation_view::allocation_view::AllocationView;
 use crate::gui::windows::disassembly_view::disassembly_view::DisassemblyView;
 use crate::gui::windows::imports_view::imports_view::ImportsView;
 use crate::gui::windows::module_view::module_view::ModuleView;
+use crate::gui::windows::scanner_view::scanner_view::ScanType;
+use crate::gui::windows::scanner_view::scanner_view::ScannerView;
+use crate::gui::windows::scanner_view::scanner_view::ValueType;
+use crate::iterators::allocation_iter::Allocation;
 use crate::memory::process::process::Process;
 use crate::to_rstr;
 use eframe::egui;
@@ -30,6 +35,10 @@ pub fn show_bar(ui: &mut egui::Ui, process: &mut Process) -> Option<Window<Tab>>
                     WindowType::DisassemblyView,
                     Tab::Disassembly(DisassemblyView {
                         address_start: process_start,
+                        process: process.clone(),
+                        bytes: Vec::new(),
+                        instructions: Vec::new(),
+                        bytes_read: 0,
                     }),
                 ));
             }
@@ -64,15 +73,44 @@ pub fn show_bar(ui: &mut egui::Ui, process: &mut Process) -> Option<Window<Tab>>
                         selected_function: None,
                         selected_function_enum: None,
                         process_path: Some(process_path),
-                        frame_width: None,
                         pe_file: None,
+                        process: process.clone(),
                     }),
                 ));
             }
-            let _ = ui.button("Allocations");
+            let allocation_button = ui.button("Allocations");
+            if allocation_button.clicked() {
+                // get all allocations and send it over instead of sending over the entire process
+                // struct
+                let stored_allocs = unsafe { Allocation::new(process).unwrap().collect() };
+                new_window = Some(Window::new(
+                    WindowType::AllocationView,
+                    Tab::Allocations(AllocationView {
+                        selected_allocation_enum: None,
+                        selected_allocation: None,
+                        allocations: stored_allocs,
+                    }),
+                ));
+            }
             let _ = ui.button("Function");
             let _ = ui.button("Graph");
-            let _ = ui.button("Scanner");
+            let scanner_button = ui.button("Scanner");
+            if scanner_button.clicked() {
+                let example_results = Vec::new();
+
+                new_window = Some(Window::new(
+                    WindowType::ScannerView,
+                    Tab::Scanner(ScannerView {
+                        process: process.clone(),
+                        is_hex: false,
+                        scan_type: ScanType::default(),
+                        value_type: ValueType::default(),
+                        value: String::new(),
+                        fast_scan: true,
+                        results: example_results,
+                    }),
+                ));
+            }
             let _ = ui.button("Scanner Results");
         });
         ui.menu_button("Settings", |_ui| {});
