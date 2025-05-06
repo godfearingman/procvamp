@@ -37,6 +37,25 @@ impl DisassemblyView {
         Ok(())
     }
 
+    fn parse_bytes_from_string(&self, input: &str) -> Result<Vec<u8>, std::num::ParseIntError> {
+        input
+            .split_whitespace()
+            .map(|s| u8::from_str_radix(s, 16))
+            .collect()
+    }
+
+    fn patch_bytes(&mut self, addr: u64, new_bytes: &[u8]) -> anyhow::Result<()> {
+        // First, write the bytes to the process
+        unsafe {
+            self.process.write_bytes(addr as usize, new_bytes)?;
+
+            // Then refresh our view to show the updated bytes
+            self.refresh_disassembly()?;
+        }
+
+        Ok(())
+    }
+
     /// Helper function to  quickly disassemble the bytes that have been read
     ///
     fn disassemble_bytes(&mut self) {
@@ -85,10 +104,35 @@ impl DisassemblyView {
 ///
 impl TabContent for DisassemblyView {
     fn ui(&mut self, ui: &mut Ui) {
+        // This is extremely ugly but we barely have a choice here because of how egui works, we'll
+        // be annoyed by the borrow checker if we try to make these struct members and attempt to
+        // modify later on
+        static mut SELECTED_ADDR: Option<u64> = None;
+        static mut BYTES_TO_PATCH: String = String::new();
+        static mut PATCH_REQUESTED: bool = false;
+        static mut PATCH_DATA: Option<(u64, Vec<u8>)> = None;
+
+        let selected_addr = unsafe { &mut SELECTED_ADDR };
+        let bytes_to_patch = unsafe { &mut BYTES_TO_PATCH };
+        let patch_requested = unsafe { &mut PATCH_REQUESTED };
+        let patch_data = unsafe { &mut PATCH_DATA };
+
+        // Check if we need to apply a patch from the previous frame
+        if *patch_requested {
+            *patch_requested = false;
+
+            if let Some((addr, bytes)) = patch_data.take() {
+                let _ = self.patch_bytes(addr, &bytes);
+                *selected_addr = None;
+                *bytes_to_patch = String::new();
+            }
+        }
+
         egui::Frame::none()
             .fill(DARK_THEME.background_dark)
             .inner_margin(10.0)
             .show(ui, |ui| {
+                // Existing top bar UI
                 ui.horizontal(|ui| {
                     if ui.button("Refresh").clicked() {
                         let _ = self.refresh_disassembly();
@@ -115,11 +159,28 @@ impl TabContent for DisassemblyView {
 
                 ui.separator();
 
+                // Add status label for patching
+                if selected_addr.is_some() {
+                    ui.horizontal(|ui| {
+                        ui.label(
+                            RichText::new(
+                                "Editing bytes - press Enter to apply or Escape to cancel",
+                            )
+                            .color(DARK_THEME.primary),
+                        );
+                    });
+                    ui.separator();
+                }
+
                 egui::ScrollArea::vertical().show(ui, |ui| {
                     // Display all decoded instructions
                     for (_i, (addr, instruction, formatted)) in self.instructions.iter().enumerate()
                     {
-                        ui.horizontal(|ui| {
+                        // We're going to check if the current line is selected or not, if it is
+                        // we'll add the editing functionality.
+                        let is_selected = selected_addr.map_or(false, |sel_addr| sel_addr == *addr);
+
+                        let row = ui.horizontal(|ui| {
                             // Spacing for the breakpoint button
                             ui.spacing_mut().item_spacing.x = 5.0;
                             selectable_bp(ui, None);
@@ -143,26 +204,63 @@ impl TabContent for DisassemblyView {
                                 "?? ?? ?? ??".to_string()
                             };
 
-                            ui.label(
-                                RichText::new(bytes_str)
-                                    .color(DARK_THEME.secondary)
-                                    .text_style(TextStyle::Monospace),
-                            );
+                            // If it is selected, we're just going to use the basic text edit
+                            // functionality for the label, otherwise we'll use a regular clickable
+                            // label.
+                            if is_selected {
+                                let response = ui.text_edit_singleline(bytes_to_patch);
 
-                            // Display disassembled text
+                                // Handle keypresses for exiting or entering
+                                if response.lost_focus()
+                                    && ui.input(|i| i.key_pressed(egui::Key::Enter))
+                                {
+                                    // Parse the new bytes
+                                    if let Ok(new_bytes) =
+                                        self.parse_bytes_from_string(bytes_to_patch)
+                                    {
+                                        // On next frame, it'll replace the bytes, this is because
+                                        // we have an immutable object of self here so we cannot
+                                        // directly update it here.
+                                        *patch_data = Some((*addr, new_bytes));
+                                        *patch_requested = true;
+                                    }
+                                }
+                                // Cancelling...
+                                if ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+                                    *selected_addr = None;
+                                    *bytes_to_patch = String::new();
+                                }
+                            } else {
+                                // Show regular label
+                                if ui
+                                    .add(egui::Label::new(
+                                        RichText::new(bytes_str.clone())
+                                            .color(DARK_THEME.secondary)
+                                            .text_style(TextStyle::Monospace),
+                                    ))
+                                    .double_clicked()
+                                {
+                                    // If double clicked, we set this one to be the selected object
+                                    *selected_addr = Some(*addr);
+                                    *bytes_to_patch = bytes_str.trim().to_string();
+                                }
+                            }
+
                             ui.label(
                                 RichText::new(formatted)
                                     .color(DARK_THEME.text_muted)
                                     .text_style(TextStyle::Monospace),
                             );
                         });
+
+                        if is_selected {
+                            row.response.highlight();
+                        }
                     }
                 });
             });
     }
 
-    /// Handle our name of the tab
-    ///
     fn title(&self) -> String {
         return format!("[>] Disassembly ({:X})", self.address_start);
     }

@@ -38,11 +38,6 @@ impl TabContent for AllocationView {
                     .exact_width(panel_width)
                     .show_inside(ui, |ui| {
                         egui::ScrollArea::vertical().show(ui, |ui| {
-                            // We don't know what the button height will be for every client so we want
-                            // to make sure the spacing is directly retrieved from egui so we can
-                            // adjust our rows accordingly
-                            let button_height = ui.spacing().interact_size.y;
-
                             // Create our table which will be used as a sort of listbox in this case,
                             // it's prettier.
                             TableBuilder::new(ui)
@@ -81,26 +76,28 @@ impl TabContent for AllocationView {
                                 })
                                 // Iterate over every allocation and display the information
                                 // in a pretty fashion, each allocation entry gets its own row
-                                .body(|mut body| {
-                                    // Store a copy of the allocations just in case we're going to have
-                                    // custom search options later
-                                    let allocs = self.allocations.clone();
+                                .body(|body| {
+                                    let row_height = 30.0;
+                                    let num_allocations = self.allocations.len();
 
-                                    allocs.iter().for_each(|allocation| {
-                                        // Create enum member and check if this is selected
-                                        let alloc_enum =
-                                            AllocationEnum::Title(allocation.BaseAddress as _);
-                                        let is_selected = Some(&alloc_enum)
-                                            == self.selected_allocation_enum.as_ref();
+                                    let mut selected_alloc_idx = None;
 
-                                        // Format the address, size & protection
-                                        let base_address =
-                                            format!("0x{:X}", allocation.BaseAddress as u64);
-                                        let region_size =
-                                            format!("0x{:X}", allocation.RegionSize as u32);
+                                    body.rows(row_height, num_allocations, |mut row| {
+                                        let row_index = row.index();
 
-                                        // Create our table entry
-                                        body.row(button_height, |mut row| {
+                                        if let Some(allocation) = self.allocations.get(row_index) {
+                                            // Create enum member and check if this is selected
+                                            let alloc_enum =
+                                                AllocationEnum::Title(allocation.BaseAddress as _);
+                                            let is_selected = Some(&alloc_enum)
+                                                == self.selected_allocation_enum.as_ref();
+
+                                            // Format the address, size & protection
+                                            let base_address =
+                                                format!("0x{:X}", allocation.BaseAddress as u64);
+                                            let region_size =
+                                                format!("0x{:X}", allocation.RegionSize as u32);
+
                                             // For the address column
                                             row.col(|ui| {
                                                 ui.centered_and_justified(|ui| {
@@ -109,10 +106,7 @@ impl TabContent for AllocationView {
                                                         base_address,
                                                     );
                                                     if label.clicked() {
-                                                        self.selected_allocation_enum =
-                                                            Some(alloc_enum.clone());
-                                                        self.selected_allocation =
-                                                            Some(*allocation);
+                                                        selected_alloc_idx = Some(row_index);
                                                     }
                                                 });
                                             });
@@ -123,13 +117,11 @@ impl TabContent for AllocationView {
                                                     let label = ui
                                                         .selectable_label(is_selected, region_size);
                                                     if label.clicked() {
-                                                        self.selected_allocation_enum =
-                                                            Some(alloc_enum.clone());
-                                                        self.selected_allocation =
-                                                            Some(*allocation);
+                                                        selected_alloc_idx = Some(row_index);
                                                     }
                                                 });
                                             });
+
                                             // For the protection column
                                             row.col(|ui| {
                                                 ui.centered_and_justified(|ui| {
@@ -138,13 +130,11 @@ impl TabContent for AllocationView {
                                                         format_protection(allocation.Protect.0),
                                                     );
                                                     if label.clicked() {
-                                                        self.selected_allocation_enum =
-                                                            Some(alloc_enum.clone());
-                                                        self.selected_allocation =
-                                                            Some(*allocation);
+                                                        selected_alloc_idx = Some(row_index);
                                                     }
                                                 });
                                             });
+
                                             // For the state column
                                             row.col(|ui| {
                                                 ui.centered_and_justified(|ui| {
@@ -153,13 +143,11 @@ impl TabContent for AllocationView {
                                                         format_state(allocation.State.0),
                                                     );
                                                     if label.clicked() {
-                                                        self.selected_allocation_enum =
-                                                            Some(alloc_enum.clone());
-                                                        self.selected_allocation =
-                                                            Some(*allocation);
+                                                        selected_alloc_idx = Some(row_index);
                                                     }
                                                 });
                                             });
+
                                             // For the type column
                                             row.col(|ui| {
                                                 ui.centered_and_justified(|ui| {
@@ -168,15 +156,21 @@ impl TabContent for AllocationView {
                                                         format_type(allocation.Type.0),
                                                     );
                                                     if label.clicked() {
-                                                        self.selected_allocation_enum =
-                                                            Some(alloc_enum);
-                                                        self.selected_allocation =
-                                                            Some(*allocation);
+                                                        selected_alloc_idx = Some(row_index);
                                                     }
                                                 });
                                             });
-                                        });
+                                        }
                                     });
+
+                                    if let Some(idx) = selected_alloc_idx {
+                                        if let Some(allocation) = self.allocations.get(idx) {
+                                            let alloc_enum =
+                                                AllocationEnum::Title(allocation.BaseAddress as _);
+                                            self.selected_allocation_enum = Some(alloc_enum);
+                                            self.selected_allocation = Some(*allocation);
+                                        }
+                                    }
                                 });
                         });
                     });

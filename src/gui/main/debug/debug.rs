@@ -12,7 +12,7 @@ pub struct DebugView {
     tree: DockState<Window<Tab>>,
     process: Process,
     windows_manager: ActiveWindows<Tab>,
-    left_index: Option<NodeIndex>,
+    _left_index: Option<NodeIndex>,
     bottom_index: Option<NodeIndex>,
 }
 
@@ -23,6 +23,7 @@ impl DebugView {
         // Since we store indexes this'll make adding tabs trivial, we need to just match the
         // window type and work from there
         match window.win_type {
+            /*
             // Start with left most tabs
             WindowType::FunctionView => {
                 // Check if we already have a left split
@@ -35,12 +36,12 @@ impl DebugView {
                 else {
                     let [_, new_left] = self.tree.main_surface_mut().split_left(
                         NodeIndex::root(),
-                        0.35,
+                        0.2,
                         vec![window],
                     );
                     self.left_index = Some(new_left);
                 }
-            }
+            }*/
             // Middle tabs are most trivial, just add it directly to middle
             WindowType::DisassemblyView
             | WindowType::ImportsView
@@ -83,7 +84,7 @@ impl DebugView {
             tree,
             process,
             windows_manager,
-            left_index: None,
+            _left_index: None,
             bottom_index: None,
         }
     }
@@ -99,46 +100,6 @@ impl DebugView {
                 if let Some(tab) = show_bar(ui, &mut self.process) {
                     self.add_tab(tab);
                 }
-
-                /*if !self.temp_bool {
-                    self.temp_bool = true;
-                    // Setup our dummy function view
-                    //
-                    let mut func_view = FunctionView::new();
-                    func_view.set(format!("fn_{:016X}", 0x1000), 0x1000);
-                    func_view.set(format!("fn_{:016X}", 0x1001), 0x1001);
-                    func_view.set(format!("fn_{:016X}", 0x1002), 0x1002);
-
-                    let func_win = Window::new(WindowType::FunctionView, Tab::Function(func_view));
-
-                    // Testing to implement some basic boiler tabs
-                    //
-                    let disasm_win = Window::new(
-                        WindowType::DisassemblyView,
-                        Tab::Disassembly(DisassemblyView {
-                            address_start: 0xDEADCAFE,
-                        }),
-                    );
-                    let disasm_win2 = Window::new(
-                        WindowType::DisassemblyView,
-                        Tab::Disassembly(DisassemblyView {
-                            address_start: 0xDEADBEEF,
-                        }),
-                    );
-                    let disasm_win3 = Window::new(
-                        WindowType::DisassemblyView,
-                        Tab::Disassembly(DisassemblyView {
-                            address_start: 0xDEADC0FFEE,
-                        }),
-                    );
-
-                    // Add two tabs to the main tree
-                    //
-                    self.add_tab(disasm_win);
-                    self.add_tab(disasm_win2);
-                    self.add_tab(disasm_win3);
-                    self.add_tab(func_win);
-                }*/
 
                 ui.add_space(3.0);
                 // Show our tabs

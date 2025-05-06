@@ -1,6 +1,6 @@
 use crate::gui::main::attach::attach::AttachView;
 use crate::gui::main::debug::debug::DebugView;
-use eframe::{egui, NativeOptions};
+use eframe::egui;
 use std::sync::Arc;
 
 /// Define views
@@ -45,7 +45,7 @@ pub fn run_gui() -> eframe::Result<()> {
     options.viewport.icon = Some(Arc::new(icon_data));
 
     eframe::run_native(
-        "procvamp ^-^",
+        "procvamp",
         options,
         Box::new(|_cc| Ok(Box::<MyApp>::default())),
     )

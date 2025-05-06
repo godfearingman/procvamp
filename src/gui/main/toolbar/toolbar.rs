@@ -3,6 +3,7 @@ use crate::gui::gui::WindowType;
 use crate::gui::main::Tab;
 use crate::gui::windows::allocation_view::allocation_view::AllocationView;
 use crate::gui::windows::disassembly_view::disassembly_view::DisassemblyView;
+use crate::gui::windows::function_view::function_view::FunctionView;
 use crate::gui::windows::imports_view::imports_view::ImportsView;
 use crate::gui::windows::module_view::module_view::ModuleView;
 use crate::gui::windows::scanner_view::scanner_view::ScanType;
@@ -92,8 +93,29 @@ pub fn show_bar(ui: &mut egui::Ui, process: &mut Process) -> Option<Window<Tab>>
                     }),
                 ));
             }
-            let _ = ui.button("Function");
-            let _ = ui.button("Graph");
+            let function_button = ui.button("Function");
+            if function_button.clicked() {
+                let process_modules = unsafe { process.get_modules().unwrap() };
+                let process_path = process_modules
+                    .iter()
+                    .find(|module| to_rstr!(module.szModule) == process.name())
+                    .map(|module| to_rstr!(module.szExePath))
+                    .unwrap();
+
+                let process_base = unsafe { process.base().unwrap() };
+
+                new_window = Some(Window::new(
+                    WindowType::FunctionView,
+                    Tab::Function(FunctionView {
+                        fmap: Vec::new(),
+                        selected_fn: None,
+                        selected_fn_enum: None,
+                        process_path: Some(process_path),
+                        process_base,
+                        selected_fn_ex: None,
+                    }),
+                ));
+            }
             let scanner_button = ui.button("Scanner");
             if scanner_button.clicked() {
                 let example_results = Vec::new();
@@ -111,7 +133,7 @@ pub fn show_bar(ui: &mut egui::Ui, process: &mut Process) -> Option<Window<Tab>>
                     }),
                 ));
             }
-            let _ = ui.button("Scanner Results");
+            let _ = ui.button("Graph -> TO IMPL");
         });
         ui.menu_button("Settings", |_ui| {});
     });

@@ -1,105 +1,136 @@
+use super::FunctionEnum;
 use crate::gui::gui::TabContent;
 use crate::gui::main::DARK_THEME;
-use egui::{RichText, TextStyle, Ui};
-use std::collections::HashMap;
-
+use crate::pe::pe::{get_functions, get_pe_from_path, RuntimeFunction};
+use egui::Ui;
+use egui_extras::{Column, TableBuilder};
 // Create out custom TabContent object for this specific tab, in this case it will be for our
-// disassembly view
+// Function view
 //
 #[derive(Clone)]
 pub struct FunctionView {
-    // Our hashmap where all functions will be stored
-    //
-    fmap: HashMap<String, u64>,
-    // Our currently selected function
-    //
-    selected_fn: Option<(String, u64)>,
-}
-
-// Since we're using a map, we'll need to implement a constructor as this will only ever be
-// constructed once and used from then on, we'll also implement some functions to retrieve and
-// store
-//
-impl FunctionView {
-    pub fn new() -> Self {
-        Self {
-            fmap: HashMap::new(),
-            selected_fn: None,
-        }
-    }
-    // Basic getter
-    //
-    pub fn get(&self, k: String) -> Option<&u64> {
-        Some(self.fmap.get(&k))?
-    }
-    // Basic setter
-    //
-    pub fn set(&mut self, k: String, v: u64) -> Option<u64> {
-        self.fmap.insert(k, v)
-    }
+    pub process_path: Option<String>,
+    pub fmap: Vec<RuntimeFunction>,
+    pub selected_fn_ex: Option<RuntimeFunction>,
+    pub selected_fn: Option<String>,
+    pub selected_fn_enum: Option<FunctionEnum>,
+    pub process_base: u64,
 }
 
 // Form abstract link to TabContent
 //
 impl TabContent for FunctionView {
     fn ui(&mut self, ui: &mut Ui) {
+        // Populate functions map if it's empty
+        //
+        if self.fmap.is_empty() {
+            let pe_file =
+                self.process_path.as_ref().map(|path| path).and_then(
+                    |path| match get_pe_from_path(path.clone()) {
+                        Ok(pe) => Some(pe),
+                        Err(_) => None,
+                    },
+                );
+            if let Some(pe) = pe_file {
+                self.fmap = get_functions(&pe).unwrap();
+            }
+        }
+
         egui::Frame::none()
             .fill(DARK_THEME.background_dark)
             .inner_margin(10.0)
             .show(ui, |ui| {
-                egui::ScrollArea::vertical().show(ui, |ui| {
-                    // Loop through every single entry in the hashmap and display them here in its
-                    // own tab
-                    //
-                    egui::Frame::none()
-                        .fill(DARK_THEME.background_dark)
-                        .inner_margin(1.0)
-                        .show(ui, |ui| {
-                            egui::ScrollArea::vertical().show(ui, |ui| {
-                                for (name, addr) in &self.fmap {
-                                    ui.spacing_mut().item_spacing.x = 5.0;
-                                    // Check if it's currently the selected name or not
-                                    //
-                                    let is_fn_selected = self
-                                        .selected_fn
-                                        .as_ref()
-                                        .map_or(false, |(selected_name, _)| selected_name == name);
+                egui::SidePanel::left("functions_panel")
+                    .resizable(false)
+                    .default_width(ui.available_width() * 0.5)
+                    .show_inside(ui, |ui| {
+                        egui::ScrollArea::vertical()
+                            .scroll_bar_visibility(
+                                egui::scroll_area::ScrollBarVisibility::AlwaysHidden,
+                            )
+                            .show(ui, |ui| {
+                                // Use TableBuilder for virtual scrolling
+                                TableBuilder::new(ui)
+                                    .column(Column::remainder())
+                                    .body(|body| {
+                                        let row_height = 20.0;
+                                        let num_functions = self.fmap.len();
 
-                                    ui.horizontal(|ui| {
-                                        // Display as an option
-                                        //
-                                        let text =
-                                            RichText::new(name).text_style(TextStyle::Monospace);
+                                        // Track selected function outside the row closure
+                                        let mut selected_fn_idx = None;
 
-                                        // Check if selected for different colour.
-                                        //
-                                        let text = text.color(if is_fn_selected {
-                                            DARK_THEME.primary
-                                        } else {
-                                            DARK_THEME.highlight
+                                        body.rows(row_height, num_functions, |mut row| {
+                                            let row_index = row.index();
+
+                                            if let Some(func) = self.fmap.get(row_index) {
+                                                let fn_name = format!(
+                                                    "fn_{:x}",
+                                                    self.process_base + func.begin_address as u64
+                                                );
+
+                                                // Create an enum member of all functions
+                                                let fn_enum = FunctionEnum::Title(fn_name.clone());
+                                                // Check if it was selected
+                                                let is_selected = self.selected_fn_enum.as_ref()
+                                                    == Some(&fn_enum);
+
+                                                row.col(|ui| {
+                                                    // The actual selectable button in question...
+                                                    let button = ui.add_sized(
+                                                        [ui.available_width(), 20.0],
+                                                        egui::SelectableLabel::new(
+                                                            is_selected,
+                                                            &fn_name,
+                                                        ),
+                                                    );
+
+                                                    // If clicked, track for selection after closure
+                                                    if button.clicked() {
+                                                        selected_fn_idx = Some(row_index);
+                                                    }
+                                                });
+                                            }
                                         });
 
-                                        // Display as a selectable element
-                                        //
-                                        if ui.selectable_label(is_fn_selected, text).clicked() {
-                                            self.selected_fn = Some((name.to_string(), *addr));
-                                            // TODO: Have some buttons later on for a right click that
-                                            // will send to disassembler view or any other main view.
-                                            //
-                                        }
+                                        // Process selection outside the row closure
+                                        if let Some(idx) = selected_fn_idx {
+                                            if let Some(func) = self.fmap.get(idx) {
+                                                let fn_name = format!(
+                                                    "fn_{:x}",
+                                                    self.process_base + func.begin_address as u64
+                                                );
 
-                                        // Display address next to it
-                                        //
-                                        ui.label(
-                                            RichText::new(format!("{:016X}", addr))
-                                                .color(DARK_THEME.secondary)
-                                                .text_style(TextStyle::Monospace),
-                                        );
+                                                // If it was clicked then store it
+                                                let fn_enum = FunctionEnum::Title(fn_name.clone());
+                                                self.selected_fn_enum = Some(fn_enum);
+                                                self.selected_fn = Some(fn_name);
+                                                self.selected_fn_ex = Some(func.clone());
+                                            }
+                                        }
                                     });
+                            });
+                    }); // Create the right panel now which will show information about the currently
+                        // selected module
+                egui::CentralPanel::default()
+                    .frame(egui::Frame::none().inner_margin(egui::Margin {
+                        left: ui.available_width() * 0.1, // Add left margin for spacing
+                        right: 0.0,
+                        top: 0.0,
+                        bottom: 0.0,
+                    }))
+                    .show_inside(ui, |ui| {
+                        // Create a list of all modules, once clicked it will store the selected
+                        // module for the right panel to display information about it
+                        egui::ScrollArea::vertical().show(ui, |ui| {
+                            ui.with_layout(egui::Layout::top_down(egui::Align::Center), |ui| {
+                                if let Some(func) = &self.selected_fn_ex {
+                                    ui.label(format!("Begin : {:X}", func.begin_address));
+                                    ui.label(format!("End : {:X}", func.end_address));
+                                    ui.label(format!("Unwind : {:X}", func.unwind_info));
                                 }
                             });
-                        })
-                });
+                        });
+                    });
             });
     }
     // Handle our name of the tab
