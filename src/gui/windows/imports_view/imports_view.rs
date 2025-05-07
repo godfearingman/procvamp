@@ -187,28 +187,30 @@ impl TabContent for ImportsView {
                                                 // Get thunks
                                                 if let Ok(thunks) = descriptor.get_first_thunk(pe) {
                                                     if idx < thunks.len() {
-                                                        let function_rva = descriptor.first_thunk.0
-                                                            + (idx as u32 * 8);
-                                                        let module_full = unsafe {
-                                                            ModuleIterator::new(self.process.pid())
-                                                                .unwrap()
-                                                                .find(|new_module| {
-                                                                    to_rstr!(new_module.szModule)
-                                                                        .to_lowercase()
-                                                                        == *module.to_lowercase()
-                                                                })
-                                                                .unwrap()
-                                                        };
-                                                        let func_address = unsafe {
-                                                            self.process
-                                                                .read::<u64>(
-                                                                    module_full.modBaseAddr
-                                                                        as usize
-                                                                        + function_rva as usize,
-                                                                )
-                                                                .unwrap()
-                                                        };
-                                                        ui.label(format!("{:X}", func_address));
+                                                        let process_base =
+                                                            unsafe { self.process.base().unwrap() };
+
+                                                        let iat_entry_address = process_base
+                                                            + descriptor.first_thunk.0 as u64
+                                                            + (idx as u64 * 8);
+
+                                                        match unsafe {
+                                                            self.process.read::<u64>(
+                                                                iat_entry_address as usize,
+                                                            )
+                                                        } {
+                                                            Ok(func_address) => {
+                                                                ui.label(format!(
+                                                                    "IAT Entry: 0x{:X}",
+                                                                    iat_entry_address
+                                                                ));
+                                                                ui.label(format!(
+                                                                    "Function address: 0x{:X}",
+                                                                    func_address
+                                                                ));
+                                                            }
+                                                            _ => {}
+                                                        }
                                                     }
                                                 }
                                             }
